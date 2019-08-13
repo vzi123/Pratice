@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'SAM template for Serverless framework service: '
+Resources:
+  HelloGoodbyeApiLocalHelloFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: HelloPython/handler.hello
+      Runtime: python3.6
+      MemorySize: 128
+      Timeout: 30
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          S3_ENDPOINT_URL: 'http://localstack:4572'
+          DYNAMO_ENDPOINT_URL: 'http://localstack:4569'
+      Events:
+        Event1:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+            RestApiId:
+              Ref: HelloGoodbyeApi
+  HelloGoodbyeApi:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: local
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title:
+            Ref: 'AWS::StackName'
+        paths:
+          /hello:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloGoodbyeApiLocalHelloFunction.Arn}/invocations
+              responses: {}
+          /goodbye:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloGoodbyeApiLocalGoodbyeFunction.Arn}/invocations
+              responses: {}
+  HelloGoodbyeApiLocalHelloFunctionLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HelloGoodbyeApiLocalHelloFunction
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HelloGoodbyeApiLocalHelloFunction
+      Principal: apigateway.amazonaws.com
+  HelloGoodbyeApiLocalGoodbyeFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: GoodbyePython/handler.goodbye
+      Runtime: python3.6
+      MemorySize: 128
+      Timeout: 30
+      Environment:
+        Variables:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          S3_ENDPOINT_URL: 'http://localstack:4572'
+          DYNAMO_ENDPOINT_URL: 'http://localstack:4569'
+      Events:
+        Event1:
+          Type: Api
+          Properties:
+            Path: /goodbye
+            Method: get
+            RestApiId:
+              Ref: HelloGoodbyeApi
+  HelloGoodbyeApiLocalGoodbyeFunctionLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HelloGoodbyeApiLocalGoodbyeFunction
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HelloGoodbyeApiLocalGoodbyeFunction
+      Principal: apigateway.amazonaws.com
